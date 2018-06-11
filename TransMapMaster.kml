@@ -2,10 +2,6 @@
 <kml xmlns="http://www.opengis.net/kml/2.2">
 <Document><name>PSE Transmission Map</name>
 <description>A Sensible Map to Efficiently Do Your Job</description>
-<Style id="rangecolour">
-<LineStyle><color>FF0000FF</color><width>3</width></LineStyle>
-<PolyStyle><color>FF0000FF</color></PolyStyle>
-</Style>
 <Placemark>
 <name>Electron Heights - Stevenson 55kV</name>
 <description></description>
