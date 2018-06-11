@@ -198,7 +198,7 @@ THIS<?xml version="1.0" encoding="UTF-8"?>
 </LineString>
 </Placemark>
 <Placemark><name>Krain Corner - Enumclaw 115kV</name>
-<description></description>
+<description>TESTING</description>
 <Style><LineStyle><color>FF0000FF</color><width>3</width></LineStyle></Style>
 <LineString>
 <tessellate>1</tessellate><altitudeMode>clampToGround</altitudeMode>
