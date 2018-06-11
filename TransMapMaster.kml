@@ -223,7 +223,7 @@ THIS<?xml version="1.0" encoding="UTF-8"?>
 </LineString>
 </Placemark>
 <Placemark><name>Krain Corner - Cumberland 115kV</name>
-<description>Here would be the distances from each substation.</description>
+<description>Here would be the distances from each substation, hehe</description>
 <Style><LineStyle><color>FF0000FF</color><width>3</width></LineStyle></Style>
 <LineString>
 <tessellate>1</tessellate><altitudeMode>clampToGround</altitudeMode>
