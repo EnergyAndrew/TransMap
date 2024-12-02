@@ -33,13 +33,13 @@
         <Placemark>
             <name>Electron Heights - Stevenson 55kV</name>
                 <description><![CDATA[
-<font size=2>TLN #035</font><br>
-<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=49974092&objAction=viewheader"
-target="_blank">Auto Switch Diagram</a>
-<br>
-<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=37012929&objAction=browse&viewType=1"
-target="_blank">Engineering Drawings</a>
-]]></description>
+			<font size=2>TLN #035</font><br>
+			<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=49974092&objAction=viewheader"
+			target="_blank">Auto Switch Diagram</a>
+			<br>
+			<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=37012929&objAction=browse&viewType=1"
+			target="_blank">Engineering Drawings</a>
+		]]></description>
                 <Style>
                     <LineStyle>
                         <color>FFFF0000</color>
@@ -215,13 +215,13 @@ target="_blank">Engineering Drawings</a>
         <Placemark>
             <name>Krain Corner - Stevenson 55kV</name>
                <description><![CDATA[
-<font size=2>TLN #035</font><br>
-<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=49974092&objAction=viewheader"
-target="_blank">Auto Switch Diagram</a>
-<br>
-<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=37012929&objAction=browse&viewType=1"
-target="_blank">Engineering Drawings</a>
-]]></description>
+			<font size=2>TLN #035</font><br>
+				<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=49974092&objAction=viewheader"
+				target="_blank">Auto Switch Diagram</a>
+				<br>
+				<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=37012929&objAction=browse&viewType=1"
+				target="_blank">Engineering Drawings</a>
+			]]></description>
                 <Style>
                     <LineStyle>
                         <color>FFFF0000</color>
