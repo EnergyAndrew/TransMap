@@ -214,7 +214,11 @@ target="_blank">Engineering Drawings</a>
         </Placemark>
         <Placemark>
             <name>Krain Corner - Stevenson 55kV</name>
-                <description></description>
+                <description><![CDATA[
+			<font size=2>TLN #157</font><br>
+			<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=37003437&objAction=browse&viewType=1"
+			target="_blank">Engineering Drawings</a>
+		]]></description>
                 <Style>
                     <LineStyle>
                         <color>FFFF0000</color>
