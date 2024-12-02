@@ -216,6 +216,11 @@
             <name>Krain Corner - Stevenson 55kV</name>
                <description><![CDATA[
 			<font size=2>TLN #157</font><br>
+			<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=49974924&objAction=viewheader"
+			target="_blank">Auto Switch Diagram</a>
+			<br>
+			<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=37003437&objAction=browse&viewType=1"
+			target="_blank">Engineering Drawings</a>
 			]]></description>
                 <Style>
                     <LineStyle>
