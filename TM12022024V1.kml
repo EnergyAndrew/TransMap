@@ -42066,5 +42066,18 @@
 			<coordinates>-122.12727204971162,48.108399615328445</coordinates>
 		</Point>
 	</Placemark>
+	<Placemark>
+		<name>Customer Gate</name>
+		<styleUrl>#Gate</styleUrl>
+		<description><![CDATA[
+<font size=2>Address: 50501 SE Homestead Valley Rd, North Bend</font><br>
+<font size=2>Name: Rick Oakley, Park Services</font><br>
+<font size=2>Phone: (425) 395-4488</font><br>
+<font size=2>Gate Code: 8864</font><br>
+ ]]></description>
+		<Point>
+			<coordinates>-121.66875117040266, 47.44106151127946</coordinates>
+		</Point>
+	</Placemark>
 </Document>
 </kml>
