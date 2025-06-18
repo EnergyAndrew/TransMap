@@ -41592,14 +41592,27 @@
 		</Point>
 	</Placemark>
 	<Placemark>
-		<name>PDN-7026</name>
+		<name>PDN-7747</name>
 		<styleUrl>#Pole</styleUrl>
 		<description><![CDATA[
-<font size=2>Address: North of Dieringer Tap, Sumner</font><br>
+<font size=2>Address: North side of Dieringer sub, Sumner</font><br>
+<font size=2>Grid: 569925-157123</font><br>
 <font size=2>Division: D-E PIERCE</font><br>
  ]]></description>
 		<Point>
-			<coordinates>-122.230565, 47.238717</coordinates>
+			<coordinates>-122.22740865621121, 47.23792900038598</coordinates>
+		</Point>
+	</Placemark>
+<Placemark>
+		<name>PDN-7746</name>
+		<styleUrl>#Pole</styleUrl>
+		<description><![CDATA[
+<font size=2>Address: North side of Dieringer sub, Sumner</font><br>
+<font size=2>Grid: 569927-157141</font><br>
+<font size=2>Division: D-E PIERCE</font><br>
+ ]]></description>
+		<Point>
+			<coordinates>-122.2264255905995, 47.23780330838684</coordinates>
 		</Point>
 	</Placemark>
 	<Placemark>
