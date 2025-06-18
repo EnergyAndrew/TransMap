@@ -40492,6 +40492,17 @@
 		</Point>
 	</Placemark>
 	<Placemark>
+		<name>PDN-0278</name>
+		<styleUrl>#Pole</styleUrl>
+		<description><![CDATA[
+<font size=2>Address: 30656 SE Enumclaw Chinook Pass Rd, Enumclaw</font><br>
+<font size=2>Division: D-SE KING</font><br>
+ ]]></description>
+		<Point>
+			<coordinates>-121.92653172905082, 47.18489111281047</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark>
 		<name>PDN-0253</name>
 		<styleUrl>#Pole</styleUrl>
 		<description><![CDATA[
