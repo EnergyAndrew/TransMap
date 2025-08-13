@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TransMap — Hybrid + Unified Search + Live Location</title>
+  <style>
+    html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    #map { position: absolute; inset: 0; }
+
+    /* Floating controls */
+    .controls { position: absolute; top: 12px; left: 12px; right: 12px; display: grid;
+      grid-template-columns: 1fr; gap: 8px; z-index: 2; pointer-events: none; }
+    .controls .group { pointer-events: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      background: rgba(255,255,255,.95); padding: 8px; border: 1px solid #e5e7eb; border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    .controls input[type="text"] { flex: 1 1 300px; min-width: 220px; padding: 8px 10px;
+      border: 1px solid #d1d5db; border-radius: 8px; }
+    .btn { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; cursor: pointer; }
+    .btn.primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .muted { color: #374151; font-size: 13px; background: rgba(255,255,255,.95); padding: 6px 10px; border-radius: 8px; }
+
+    /* Unified suggestion list */
+    .suggest { position: absolute; top: 56px; left: 12px; width: min(560px, calc(100% - 24px));
+      max-height: 320px; overflow: auto; z-index: 3; background: white; border: 1px solid #e5e7eb;
+      border-radius: 10px; box-shadow: 0 16px 32px rgba(0,0,0,.18); display: none; }
+    .section { padding: 6px 10px; border-top: 1px solid #f1f5f9; }
+    .section:first-child { border-top: 0; }
+    .section h4 { margin: 6px 2px 6px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+    .sug-item { padding: 9px 12px; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .sug-item:hover { background: #f3f4f6; }
+    .badge { font-size: 11px; padding: 2px 6px; border: 1px solid #d1d5db; border-radius: 999px; color: #374151; background: #f9fafb; }
+
+    /* Custom map control */
+    .map-control { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px 10px; margin: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.1); cursor: pointer; font-size: 13px; }
+
+    @media (max-width: 700px) {
+      .controls { grid-template-columns: 1fr; }
+      .suggest { left: 12px; width: calc(100% - 24px); }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="controls">
+    <!-- Search & Tracking -->
+    <div class="group" style="position: relative;">
+      <input id="placeSearch" type="text" placeholder="Search address/place or KML object name…">
+      <button id="clearSearch" class="btn">Clear</button>
+      <button id="trackToggle" class="btn primary">Start Tracking</button>
+      <span id="status" class="muted">Ready</span>
+
+      <!-- Unified suggestion box -->
+      <div id="suggest" class="suggest">
+        <div id="placesSection" class="section" style="display:none;">
+          <h4>Places</h4>
+          <div id="placesBody"></div>
+        </div>
+        <div id="kmlSection" class="section" style="display:none;">
+          <h4>KML</h4>
+          <div id="kmlBody"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const KML_URL = "https://raw.githubusercontent.com/EnergyAndrew/TransMap/refs/heads/master/TM12022024V1.kml";
+    let map, kmlLayer = null, kmlIndex = [], kmlReady = false;
+    let searchMarker = null, searchInfoWindow = null;
+    let acService = null, placesService = null, acToken = null, acTimer = null;
+    let watchId = null, meMarker = null, meAccuracy = null, followMe = true, haveFirstFix = false;
+
+    const statusEl = document.getElementById("status");
+    function setStatus(msg) { statusEl.textContent = msg; }
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 39.5, lng: -98.35 },
+        zoom: 4,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+        mapTypeId: google.maps.MapTypeId.HYBRID
+      });
+      loadKmlLayer();
+      buildKmlIndex();
+      setupUnifiedSearch();
+      setupGeoUi();
+
+      const recenterDiv = document.createElement("div");
+      recenterDiv.className = "map-control";
+      recenterDiv.textContent = "My Location";
+      recenterDiv.title = "Recenter to your current location";
+      recenterDiv.addEventListener("click", () => {
+        if (meMarker) {
+          map.panTo(meMarker.getPosition());
+          map.setZoom(Math.max(map.getZoom(), 16));
+        } else { setStatus("No location yet. Start Tracking first."); }
+      });
+      map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(recenterDiv);
+    }
+
+    function loadKmlLayer() {
+      if (kmlLayer) kmlLayer.setMap(null);
+      const bust = KML_URL.includes("?") ? "&" + Date.now() : "?" + Date.now();
+      kmlLayer = new google.maps.KmlLayer({
+        url: KML_URL + bust,
+        map,
+        preserveViewport: false,
+        suppressInfoWindows: false,
+      });
+      google.maps.event.addListenerOnce(kmlLayer, "defaultviewport_changed", () => {
+        setStatus("KML loaded");
+      });
+    }
+
+    async function buildKmlIndex() {
+      setStatus("Indexing KML…");
+      try {
+        const resp = await fetch(KML_URL, { cache: "no-store" });
+        const txt = await resp.text();
+        const dom = new DOMParser().parseFromString(txt, "text/xml");
+        const placemarks = Array.from(dom.getElementsByTagName("Placemark"));
+        const idx = [];
+        for (const pm of placemarks) {
+          const nameNode = pm.getElementsByTagName("name")[0];
+          const name = (nameNode && nameNode.textContent.trim()) || "Placemark";
+          let pos = null;
+          const point = pm.getElementsByTagName("Point")[0];
+          if (point) {
+            const coords = getFirstCoords(point);
+            if (coords) pos = new google.maps.LatLng(coords.lat, coords.lng);
+          }
+          if (pos) idx.push({ name, type: "Point", position: pos });
+        }
+        kmlIndex = idx;
+        kmlReady = true;
+        setStatus(`KML indexed: ${idx.length} items`);
+      } catch (e) {
+        setStatus("Failed to index KML names");
+      }
+    }
+
+    function getFirstCoords(node) {
+      const c = node.getElementsByTagName("coordinates")[0];
+      if (!c) return null;
+      const parts = c.textContent.trim().split(",");
+      return { lat: parseFloat(parts[1]), lng: parseFloat(parts[0]) };
+    }
+
+    function setupUnifiedSearch() {
+      const input = document.getElementById("placeSearch");
+      const clearBtn = document.getElementById("clearSearch");
+      const suggest = document.getElementById("suggest");
+      const placesSection = document.getElementById("placesSection");
+      const kmlSection = document.getElementById("kmlSection");
+      const placesBody = document.getElementById("placesBody");
+      const kmlBody = document.getElementById("kmlBody");
+
+      acService = new google.maps.places.AutocompleteService();
+      placesService = new google.maps.places.PlacesService(map);
+      acToken = new google.maps.places.AutocompleteSessionToken();
+
+      const doSearch = async () => {
+        const q = input.value.trim();
+        if (!q) { suggest.style.display = "none"; return; }
+        let placePreds = [];
+        const req = { input: q, sessionToken: acToken, types: ["geocode"] };
+        try {
+          await new Promise(resolve => {
+            acService.getPlacePredictions(req, preds => { placePreds = preds || []; resolve(); });
+          });
+        } catch (e) { placePreds = []; }
+
+        let kmlMatches = [];
+        if (kmlReady && q.length >= 2) {
+          const lower = q.toLowerCase();
+          kmlMatches = kmlIndex.filter(it => it.name.toLowerCase().includes(lower)).slice(0, 12);
+        }
+
+        placesBody.innerHTML = "";
+        kmlBody.innerHTML = "";
+        if (placePreds.length) {
+          placesSection.style.display = "block";
+          placePreds.forEach(p => {
+            const item = document.createElement("div");
+            item.className = "sug-item";
+            item.innerHTML = `<span>${p.description}</span><span class="badge">Place</span>`;
+            item.addEventListener("click", () => onChoosePlacePrediction(p));
+            placesBody.appendChild(item);
+          });
+        } else { placesSection.style.display = "none"; }
+
+        if (kmlMatches.length) {
+          kmlSection.style.display = "block";
+          kmlMatches.forEach(m => {
+            const item = document.createElement("div");
+            item.className = "sug-item";
+            item.innerHTML = `<span>${m.name}</span><span class="badge">${m.type}</span>`;
+            item.addEventListener("click", () => { gotoKmlItem(m); suggest.style.display = "none"; });
+            kmlBody.appendChild(item);
+          });
+        } else { kmlSection.style.display = "none"; }
+
+        suggest.style.display = (placePreds.length || kmlMatches.length) ? "block" : "none";
+      };
+
+      input.addEventListener("input", () => { clearTimeout(acTimer); acTimer = setTimeout(doSearch, 180); });
+      clearBtn.addEventListener("click", () => {
+        input.value = ""; suggest.style.display = "none";
+        if (searchMarker) { searchMarker.setMap(null); searchMarker = null; }
+        if (searchInfoWindow) searchInfoWindow.close();
+      });
+    }
+
+    function onChoosePlacePrediction(pred) {
+      placesService.getDetails({
+        placeId: pred.place_id,
+        fields: ["geometry", "name", "formatted_address"]
+      }, (place, status) => {
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !place || !place.geometry) {
+          setStatus("Failed to get place details");
+          return;
+        }
+        showPlace(place);
+      });
+    }
+
+    function gotoKmlItem(it) {
+      if (searchMarker) searchMarker.setMap(null);
+      searchMarker = new google.maps.Marker({ position: it.position, map, title: it.name });
+      map.panTo(it.position);
+      map.setZoom(16);
+      if (!searchInfoWindow) searchInfoWindow = new google.maps.InfoWindow();
+      searchInfoWindow.setContent(`<div><strong>${it.name}</strong></div>`);
+      searchInfoWindow.open(map, searchMarker);
+    }
+
+    function showPlace(place) {
+      if (searchMarker) searchMarker.setMap(null);
+      const loc = place.geometry.location;
+      map.panTo(loc); map.setZoom(16);
+      searchMarker = new google.maps.Marker({ position: loc, map, title: place.name || place.formatted_address });
+      if (!searchInfoWindow) searchInfoWindow = new google.maps.InfoWindow();
+      searchInfoWindow.setContent(`<div><strong>${place.name || ""}</strong><div>${place.formatted_address || ""}</div></div>`);
+      searchInfoWindow.open(map, searchMarker);
+    }
+
+    function setupGeoUi() {
+      const btn = document.getElementById("trackToggle");
+      btn.addEventListener("click", () => { if (watchId === null) startTracking(); else stopTracking(); });
+    }
+
+    function startTracking() {
+      if (!navigator.geolocation) { setStatus("Geolocation not supported."); return; }
+      setStatus("Requesting location…");
+      watchId = navigator.geolocation.watchPosition(onPos, () => setStatus("Geo error"), { enableHighAccuracy: true });
+      document.getElementById("trackToggle").textContent = "Stop Tracking";
+    }
+
+    function stopTracking() {
+      if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+      if (meMarker) meMarker.setMap(null);
+      if (meAccuracy) meAccuracy.setMap(null);
+      document.getElementById("trackToggle").textContent = "Start Tracking";
+    }
+
+    function onPos(pos) {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      const here = new google.maps.LatLng(lat, lng);
+      if (!meMarker) {
+        meMarker = new google.maps.Marker({
+          position: here, map, title: "You are here",
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#1d4ed8", fillOpacity: 1,
+                  strokeColor: "white", strokeWeight: 2 }
+        });
+        meAccuracy = new google.maps.Circle({ map, center: here, radius: pos.coords.accuracy });
+      } else {
+        meMarker.setPosition(here);
+        meAccuracy.setCenter(here);
+      }
+      if (!haveFirstFix || followMe) { map.panTo(here); }
+      haveFirstFix = true;
+    }
+
+    window.initMap = initMap;
+  </script>
+
+  <!-- Your API key embedded -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArEZwQX5ZFYUMJt98r0Hsjzu_9hjaEm4g&libraries=places&callback=initMap"></script>
+</body>
+</html>
