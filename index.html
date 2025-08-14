@@ -3,27 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TransMap — Hybrid + Unified Search + Measure + Elevation + Live Location</title>
+  <title>TransMap — Hybrid + Unified Search + Live Location</title>
   <style>
     html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
     #map { position: absolute; inset: 0; }
 
-    /* Top-left compact controls */
-    .hud { position: absolute; top: 10px; left: 10px; z-index: 3; display: flex; gap: 8px; align-items: center; }
-    .searchWrap { display:flex; align-items:center; gap:6px; background: rgba(255,255,255,.95);
-      border:1px solid #e5e7eb; border-radius: 999px; padding: 4px 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-    .searchWrap input { width: min(54vw, 360px); border: none; outline: none; padding: 6px 4px; background: transparent; }
-    .iconBtn { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px;
-      border-radius: 999px; border:1px solid #e5e7eb; background:white; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-    .pillBtn { padding: 6px 10px; border-radius: 999px; border:1px solid #e5e7eb; background:white; cursor:pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,.08); font-size: 13px; }
-    .pillBtn.active { background:#2563eb; color:white; border-color:#2563eb; }
+    /* Floating controls */
+    .controls { position: absolute; top: 12px; left: 12px; right: 12px; display: grid;
+      grid-template-columns: 1fr; gap: 8px; z-index: 2; pointer-events: none; }
+    .controls .group { pointer-events: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      background: rgba(255,255,255,.95); padding: 8px; border: 1px solid #e5e7eb; border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    .controls input[type="text"] { flex: 1 1 300px; min-width: 220px; padding: 8px 10px;
+      border: 1px solid #d1d5db; border-radius: 8px; }
+    .btn { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; cursor: pointer; }
+    .btn.primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .muted { color: #374151; font-size: 13px; background: rgba(255,255,255,.95); padding: 6px 10px; border-radius: 8px; }
 
-    /* Unified suggestion list under the search */
-    .suggest { position: absolute; top: 48px; left: 10px; width: min(70vw, 520px);
-      max-height: 320px; overflow: auto; z-index: 4; background: white; border: 1px solid #e5e7eb;
-      border-radius: 12px; box-shadow: 0 16px 32px rgba(0,0,0,.18); display: none; }
+    /* Unified suggestion list */
+    .suggest { position: absolute; top: 56px; left: 12px; width: min(560px, calc(100% - 24px));
+      max-height: 320px; overflow: auto; z-index: 3; background: white; border: 1px solid #e5e7eb;
+      border-radius: 10px; box-shadow: 0 16px 32px rgba(0,0,0,.18); display: none; }
     .section { padding: 6px 10px; border-top: 1px solid #f1f5f9; }
     .section:first-child { border-top: 0; }
     .section h4 { margin: 6px 2px 6px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
@@ -31,91 +32,50 @@
     .sug-item:hover { background: #f3f4f6; }
     .badge { font-size: 11px; padding: 2px 6px; border: 1px solid #d1d5db; border-radius: 999px; color: #374151; background: #f9fafb; }
 
-    /* Floating bottom-right control */
+    /* Custom map control */
     .map-control { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px 10px; margin: 10px;
       box-shadow: 0 2px 6px rgba(0,0,0,.1); cursor: pointer; font-size: 13px; }
 
-    /* Info panel for clicked polyline + elevation */
-    .infoPanel { position: absolute; right: 10px; bottom: 10px; width: min(90vw, 420px); z-index: 3;
-      background: rgba(255,255,255,.97); border:1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 12px 28px rgba(0,0,0,.18); }
-    .infoHeader { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #edf2f7; }
-    .infoBody { padding: 10px 12px; }
-    .closeX { cursor:pointer; font-weight:600; border:none; background:transparent; }
-
-    .kv { display:grid; grid-template-columns: auto 1fr; gap: 6px 10px; font-size: 13px; }
-    .kv div:nth-child(odd) { color:#6b7280; }
-    canvas { width: 100%; height: 140px; }
-
     @media (max-width: 700px) {
-      .searchWrap input { width: min(70vw, 260px); }
+      .controls { grid-template-columns: 1fr; }
+      .suggest { left: 12px; width: calc(100% - 24px); }
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- Compact top controls -->
-  <div class="hud">
-    <div class="searchWrap">
-      <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M10 18a8 8 0 1 1 5.293-14.293A8 8 0 0 1 10 18m8.707 1.293l-3.97-3.97A10 10 0 1 0 12 22a10 10 0 0 0 6.05-2.06l3.97 3.97z"/></svg>
-      <input id="placeSearch" type="text" placeholder="Search places or KML names…" />
-      <button id="clearSearch" class="iconBtn" title="Clear">
-        <svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-      </button>
-    </div>
-    <button id="measureBtn" class="pillBtn" title="Measure distance">Measure</button>
-    <button id="trackToggle" class="pillBtn" title="Start/Stop location">Track</button>
-  </div>
+  <div class="controls">
+    <!-- Search & Tracking -->
+    <div class="group" style="position: relative;">
+      <input id="placeSearch" type="text" placeholder="Search address/place or KML object name…">
+      <button id="clearSearch" class="btn">Clear</button>
+      <button id="trackToggle" class="btn primary">Start Tracking</button>
+      <span id="status" class="muted">Ready</span>
 
-  <!-- Unified suggestion dropdown -->
-  <div id="suggest" class="suggest">
-    <div id="placesSection" class="section" style="display:none;">
-      <h4>Places</h4>
-      <div id="placesBody"></div>
-    </div>
-    <div id="kmlSection" class="section" style="display:none;">
-      <h4>KML</h4>
-      <div id="kmlBody"></div>
-    </div>
-  </div>
-
-  <!-- Info panel -->
-  <div id="infoPanel" class="infoPanel" style="display:none;">
-    <div class="infoHeader">
-      <strong id="infoTitle">Line Info</strong>
-      <button class="closeX" id="infoClose">✕</button>
-    </div>
-    <div class="infoBody">
-      <div class="kv">
-        <div>Total length</div><div id="kvTotal">—</div>
-        <div>Distance from start → click</div><div id="kvFromStart">—</div>
-        <div>Distance from end → click</div><div id="kvFromEnd">—</div>
-      </div>
-      <div style="margin-top:10px;">
-        <canvas id="elevCanvas" width="400" height="140"></canvas>
+      <!-- Unified suggestion box -->
+      <div id="suggest" class="suggest">
+        <div id="placesSection" class="section" style="display:none;">
+          <h4>Places</h4>
+          <div id="placesBody"></div>
+        </div>
+        <div id="kmlSection" class="section" style="display:none;">
+          <h4>KML</h4>
+          <div id="kmlBody"></div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
     const KML_URL = "https://raw.githubusercontent.com/EnergyAndrew/TransMap/refs/heads/master/TM12022024V1.kml";
-    let map;
-    let placesService, acService, acToken;
-    let searchMarker, searchInfoWindow;
-    let kmlPolylines = []; // array of { name, polyline (google.maps.Polyline), pathLatLngs: LatLng[], lengthMeters }
-    let kmlPoints = []; // for name search suggestions if needed
+    let map, kmlLayer = null, kmlIndex = [], kmlReady = false;
+    let searchMarker = null, searchInfoWindow = null;
+    let acService = null, placesService = null, acToken = null, acTimer = null;
+    let watchId = null, meMarker = null, meAccuracy = null, followMe = true, haveFirstFix = false;
 
-    // Measuring tool state
-    let measuring = false;
-    let measurePath = [];
-    let measurePolyline = null;
-    let measureLabel = null;
-
-    // Geolocation
-    let watchId = null, meMarker = null, meAccuracy = null, haveFirstFix = false;
-
-    // Elevation
-    let elevationService = null;
+    const statusEl = document.getElementById("status");
+    function setStatus(msg) { statusEl.textContent = msg; }
 
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
@@ -126,25 +86,73 @@
         fullscreenControl: true,
         mapTypeId: google.maps.MapTypeId.HYBRID
       });
+      loadKmlLayer();
+      buildKmlIndex();
+      setupUnifiedSearch();
+      setupGeoUi();
 
-      // Services
-      placesService = new google.maps.places.PlacesService(map);
-      acService = new google.maps.places.AutocompleteService();
-      acToken = new google.maps.places.AutocompleteSessionToken();
-      elevationService = new google.maps.ElevationService();
-
-      // UI
-      setupSearch();
-      setupMeasure();
-      setupTracking();
-      addRecenterControl();
-
-      // Load and render KML polylines
-      loadAndRenderKml();
+      const recenterDiv = document.createElement("div");
+      recenterDiv.className = "map-control";
+      recenterDiv.textContent = "My Location";
+      recenterDiv.title = "Recenter to your current location";
+      recenterDiv.addEventListener("click", () => {
+        if (meMarker) {
+          map.panTo(meMarker.getPosition());
+          map.setZoom(Math.max(map.getZoom(), 16));
+        } else { setStatus("No location yet. Start Tracking first."); }
+      });
+      map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(recenterDiv);
     }
 
-    // ---------- Search (Unified dropdown) ----------
-    function setupSearch() {
+    function loadKmlLayer() {
+      if (kmlLayer) kmlLayer.setMap(null);
+      const bust = KML_URL.includes("?") ? "&" + Date.now() : "?" + Date.now();
+      kmlLayer = new google.maps.KmlLayer({
+        url: KML_URL + bust,
+        map,
+        preserveViewport: false,
+        suppressInfoWindows: false,
+      });
+      google.maps.event.addListenerOnce(kmlLayer, "defaultviewport_changed", () => {
+        setStatus("KML loaded");
+      });
+    }
+
+    async function buildKmlIndex() {
+      setStatus("Indexing KML…");
+      try {
+        const resp = await fetch(KML_URL, { cache: "no-store" });
+        const txt = await resp.text();
+        const dom = new DOMParser().parseFromString(txt, "text/xml");
+        const placemarks = Array.from(dom.getElementsByTagName("Placemark"));
+        const idx = [];
+        for (const pm of placemarks) {
+          const nameNode = pm.getElementsByTagName("name")[0];
+          const name = (nameNode && nameNode.textContent.trim()) || "Placemark";
+          let pos = null;
+          const point = pm.getElementsByTagName("Point")[0];
+          if (point) {
+            const coords = getFirstCoords(point);
+            if (coords) pos = new google.maps.LatLng(coords.lat, coords.lng);
+          }
+          if (pos) idx.push({ name, type: "Point", position: pos });
+        }
+        kmlIndex = idx;
+        kmlReady = true;
+        setStatus(`KML indexed: ${idx.length} items`);
+      } catch (e) {
+        setStatus("Failed to index KML names");
+      }
+    }
+
+    function getFirstCoords(node) {
+      const c = node.getElementsByTagName("coordinates")[0];
+      if (!c) return null;
+      const parts = c.textContent.trim().split(",");
+      return { lat: parseFloat(parts[1]), lng: parseFloat(parts[0]) };
+    }
+
+    function setupUnifiedSearch() {
       const input = document.getElementById("placeSearch");
       const clearBtn = document.getElementById("clearSearch");
       const suggest = document.getElementById("suggest");
@@ -152,30 +160,28 @@
       const kmlSection = document.getElementById("kmlSection");
       const placesBody = document.getElementById("placesBody");
       const kmlBody = document.getElementById("kmlBody");
-      let acTimer = null;
+
+      acService = new google.maps.places.AutocompleteService();
+      placesService = new google.maps.places.PlacesService(map);
+      acToken = new google.maps.places.AutocompleteSessionToken();
 
       const doSearch = async () => {
         const q = input.value.trim();
         if (!q) { suggest.style.display = "none"; return; }
-
-        // 1) Places predictions
         let placePreds = [];
+        const req = { input: q, sessionToken: acToken, types: ["geocode"] };
         try {
           await new Promise(resolve => {
-            acService.getPlacePredictions({ input: q, sessionToken: acToken, types:["geocode"] }, preds => {
-              placePreds = preds || []; resolve();
-            });
+            acService.getPlacePredictions(req, preds => { placePreds = preds || []; resolve(); });
           });
-        } catch(e) { placePreds = []; }
+        } catch (e) { placePreds = []; }
 
-        // 2) KML name matches (lines + points)
-        const lower = q.toLowerCase();
-        const kmlMatches = [
-          ...kmlPolylines.filter(p => (p.name||"").toLowerCase().includes(lower)).slice(0, 10),
-          ...kmlPoints.filter(p => (p.name||"").toLowerCase().includes(lower)).slice(0, 10)
-        ];
+        let kmlMatches = [];
+        if (kmlReady && q.length >= 2) {
+          const lower = q.toLowerCase();
+          kmlMatches = kmlIndex.filter(it => it.name.toLowerCase().includes(lower)).slice(0, 12);
+        }
 
-        // Render
         placesBody.innerHTML = "";
         kmlBody.innerHTML = "";
         if (placePreds.length) {
@@ -194,19 +200,8 @@
           kmlMatches.forEach(m => {
             const item = document.createElement("div");
             item.className = "sug-item";
-            item.innerHTML = `<span>${escapeHtml(m.name||"KML item")}</span><span class="badge">${m.polyline ? "Path" : "Point"}</span>`;
-            item.addEventListener("click", () => {
-              suggest.style.display = "none";
-              if (m.polyline) {
-                const bounds = new google.maps.LatLngBounds();
-                m.polyline.getPath().forEach(pt => bounds.extend(pt));
-                map.fitBounds(bounds);
-              } else if (m.position) {
-                if (searchMarker) searchMarker.setMap(null);
-                searchMarker = new google.maps.Marker({ position: m.position, map, title: m.name || "KML point" });
-                map.panTo(m.position); map.setZoom(16);
-              }
-            });
+            item.innerHTML = `<span>${m.name}</span><span class="badge">${m.type}</span>`;
+            item.addEventListener("click", () => { gotoKmlItem(m); suggest.style.display = "none"; });
             kmlBody.appendChild(item);
           });
         } else { kmlSection.style.display = "none"; }
@@ -214,261 +209,66 @@
         suggest.style.display = (placePreds.length || kmlMatches.length) ? "block" : "none";
       };
 
-      input.addEventListener("input", () => { clearTimeout(acTimer); acTimer = setTimeout(doSearch, 160); });
-      input.addEventListener("focus", () => { clearTimeout(acTimer); acTimer = setTimeout(doSearch, 1); });
-
-      document.addEventListener("click", (e) => {
-        if (!suggest.contains(e.target) && e.target !== input) suggest.style.display = "none";
-      });
-
+      input.addEventListener("input", () => { clearTimeout(acTimer); acTimer = setTimeout(doSearch, 180); });
       clearBtn.addEventListener("click", () => {
-        input.value = "";
-        suggest.style.display = "none";
+        input.value = ""; suggest.style.display = "none";
         if (searchMarker) { searchMarker.setMap(null); searchMarker = null; }
         if (searchInfoWindow) searchInfoWindow.close();
-        acToken = new google.maps.places.AutocompleteSessionToken();
       });
     }
 
     function onChoosePlacePrediction(pred) {
-      placesService.getDetails({ placeId: pred.place_id, fields: ["geometry","name","formatted_address"] },
-        (place, status) => {
-          if (status !== google.maps.places.PlacesServiceStatus.OK || !place || !place.geometry) return;
-          if (searchMarker) searchMarker.setMap(null);
-          const loc = place.geometry.location;
-          searchMarker = new google.maps.Marker({ position: loc, map, title: place.name || place.formatted_address });
-          map.panTo(loc); map.setZoom(16);
-          if (!searchInfoWindow) searchInfoWindow = new google.maps.InfoWindow();
-          searchInfoWindow.setContent(`<div><strong>${escapeHtml(place.name||"")}</strong><div>${escapeHtml(place.formatted_address||"")}</div></div>`);
-          searchInfoWindow.open(map, searchMarker);
-          acToken = new google.maps.places.AutocompleteSessionToken();
-        });
-    }
-
-    // ---------- KML loading & rendering ----------
-    async function loadAndRenderKml() {
-      try {
-        const resp = await fetch(KML_URL, { cache: "no-store" });
-        const xml = await resp.text();
-        const dom = new DOMParser().parseFromString(xml, "text/xml");
-        // Points for search
-        dom.querySelectorAll("Placemark Point coordinates").forEach(node => {
-          const coords = parseCoordsText(node.textContent);
-          if (!coords || !Number.isFinite(coords.lat)) return;
-          const name = node.closest("Placemark")?.querySelector("name")?.textContent?.trim() || "Placemark";
-          kmlPoints.push({ name, position: new google.maps.LatLng(coords.lat, coords.lng) });
-        });
-        // LineStrings
-        const ls = dom.querySelectorAll("Placemark LineString");
-        ls.forEach(lineNode => {
-          const pm = lineNode.closest("Placemark");
-          const name = pm?.querySelector("name")?.textContent?.trim() || "Polyline";
-          const coordsText = lineNode.querySelector("coordinates")?.textContent || "";
-          const path = parseCoordsList(coordsText).map(c => new google.maps.LatLng(c.lat, c.lng));
-          if (path.length < 2) return;
-          const poly = new google.maps.Polyline({
-            path,
-            map,
-            strokeColor: "#FF6B00",
-            strokeOpacity: 0.95,
-            strokeWeight: 3
-          });
-          const lengthMeters = google.maps.geometry.spherical.computeLength(path);
-          const rec = { name, polyline: poly, pathLatLngs: path, lengthMeters };
-          kmlPolylines.push(rec);
-
-          poly.addListener("click", (e) => onPolylineClick(e, rec));
-        });
-
-      } catch (e) {
-        console.error("KML load error", e);
-        alert("Failed to load KML.");
-      }
-    }
-
-    function parseCoordsText(t) {
-      if (!t) return null;
-      const first = t.trim().split(/\s+/)[0];
-      const a = first.split(",");
-      if (a.length < 2) return null;
-      return { lng: parseFloat(a[0]), lat: parseFloat(a[1]) };
-    }
-    function parseCoordsList(t) {
-      return (t||"").trim().split(/\s+/).map(s => {
-        const a = s.split(",");
-        return { lng: parseFloat(a[0]), lat: parseFloat(a[1]) };
-      }).filter(c => Number.isFinite(c.lat) && Number.isFinite(c.lng));
-    }
-
-    // ---------- Measuring tool ----------
-    function setupMeasure() {
-      const btn = document.getElementById("measureBtn");
-      btn.addEventListener("click", () => {
-        measuring = !measuring;
-        btn.classList.toggle("active", measuring);
-        if (measuring) {
-          startMeasure();
-        } else {
-          endMeasure();
+      placesService.getDetails({
+        placeId: pred.place_id,
+        fields: ["geometry", "name", "formatted_address"]
+      }, (place, status) => {
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !place || !place.geometry) {
+          setStatus("Failed to get place details");
+          return;
         }
-      });
-      map.addListener("click", (e) => {
-        if (!measuring) return;
-        addMeasurePoint(e.latLng);
-      });
-      map.addListener("rightclick", () => { if (measuring) finalizeMeasure(); });
-      map.addListener("dblclick", () => { if (measuring) finalizeMeasure(); });
-    }
-
-    function startMeasure() {
-      clearMeasure();
-      measurePolyline = new google.maps.Polyline({
-        path: [], map, strokeColor:"#2563eb", strokeOpacity:0.95, strokeWeight:3
-      });
-    }
-    function addMeasurePoint(latlng) {
-      measurePath.push(latlng);
-      measurePolyline.getPath().push(latlng);
-      const len = google.maps.geometry.spherical.computeLength(measurePolyline.getPath());
-      showMeasureLabel(latlng, formatMeters(len));
-    }
-    function finalizeMeasure() {
-      const len = google.maps.geometry.spherical.computeLength(measurePolyline.getPath());
-      if (measureLabel) measureLabel.setContent(`<div style="font-weight:600">${formatMeters(len)}</div>`);
-      measuring = false;
-      document.getElementById("measureBtn").classList.remove("active");
-    }
-    function clearMeasure() {
-      measurePath = [];
-      if (measurePolyline) { measurePolyline.setMap(null); measurePolyline = null; }
-      if (measureLabel) { measureLabel.close(); measureLabel = null; }
-    }
-    function endMeasure() { finalizeMeasure(); }
-    function showMeasureLabel(latlng, text) {
-      if (!measureLabel) measureLabel = new google.maps.InfoWindow({ content: text, position: latlng });
-      measureLabel.setContent(text);
-      measureLabel.setPosition(latlng);
-      measureLabel.open({ map });
-    }
-
-    // ---------- Polyline click: distances + elevation ----------
-    async function onPolylineClick(e, rec) {
-      const click = e.latLng;
-      const total = rec.lengthMeters;
-      const along = distanceAlongPolyline(rec.pathLatLngs, click);
-      const fromStart = along;
-      const fromEnd = Math.max(0, total - along);
-
-      // Elevation along the entire line
-      let elevs = [];
-      try {
-        elevs = await getElevationProfile(rec.pathLatLngs, 128);
-      } catch (_) {}
-
-      openInfoPanel(rec.name, total, fromStart, fromEnd, elevs);
-    }
-
-    function distanceAlongPolyline(path, point) {
-      // Approx projection to meters around reference latitude
-      const lat0 = point.lat();
-      const mPerDegLat = 111320;
-      const mPerDegLng = Math.cos(lat0 * Math.PI/180) * 111320;
-
-      function toXY(ll) { return { x: ll.lng()*mPerDegLng, y: ll.lat()*mPerDegLat }; }
-      const P = toXY(point);
-      let acc = 0;
-      let best = { d2: Infinity, accAtFoot: 0 };
-
-      for (let i=0; i<path.length-1; i++) {
-        const A = toXY(path[i]);
-        const B = toXY(path[i+1]);
-        const AB = { x: B.x - A.x, y: B.y - A.y };
-        const AP = { x: P.x - A.x, y: P.y - A.y };
-        const ab2 = AB.x*AB.x + AB.y*AB.y;
-        let t = ab2 ? (AP.x*AB.x + AP.y*AB.y) / ab2 : 0;
-        if (t < 0) t = 0; else if (t > 1) t = 1;
-        const foot = { x: A.x + t*AB.x, y: A.y + t*AB.y };
-        const dx = P.x - foot.x, dy = P.y - foot.y;
-        const d2 = dx*dx + dy*dy;
-        const segLen = Math.sqrt(ab2);
-        const accAtFoot = acc + t*segLen;
-        if (d2 < best.d2) best = { d2, accAtFoot };
-        acc += segLen;
-      }
-      return best.accAtFoot; // meters
-    }
-
-    function getElevationProfile(path, samples) {
-      return new Promise((resolve, reject) => {
-        elevationService.getElevationAlongPath({ path, samples }, (results, status) => {
-          if (status !== "OK" || !results) return reject(status);
-          resolve(results.map(r => r.elevation));
-        });
+        showPlace(place);
       });
     }
 
-    function openInfoPanel(title, total, fromStart, fromEnd, elevations) {
-      const panel = document.getElementById("infoPanel");
-      document.getElementById("infoTitle").textContent = title || "Line Info";
-      document.getElementById("kvTotal").textContent = formatMeters(total);
-      document.getElementById("kvFromStart").textContent = formatMeters(fromStart);
-      document.getElementById("kvFromEnd").textContent = formatMeters(fromEnd);
-      panel.style.display = "block";
-      document.getElementById("infoClose").onclick = () => { panel.style.display = "none"; };
-
-      // Draw elevation
-      const canvas = document.getElementById("elevCanvas");
-      drawElevation(canvas, elevations);
+    function gotoKmlItem(it) {
+      if (searchMarker) searchMarker.setMap(null);
+      searchMarker = new google.maps.Marker({ position: it.position, map, title: it.name });
+      map.panTo(it.position);
+      map.setZoom(16);
+      if (!searchInfoWindow) searchInfoWindow = new google.maps.InfoWindow();
+      searchInfoWindow.setContent(`<div><strong>${it.name}</strong></div>`);
+      searchInfoWindow.open(map, searchMarker);
     }
 
-    function drawElevation(canvas, elevs) {
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0,0,canvas.width, canvas.height);
-      if (!elevs || !elevs.length) {
-        ctx.fillStyle = "#6b7280";
-        ctx.fillText("No elevation data", 10, 20);
-        return;
-      }
-      const w = canvas.width, h = canvas.height;
-      const min = Math.min(...elevs), max = Math.max(...elevs);
-      const pad = 20;
-      // Axis
-      ctx.strokeStyle = "#e5e7eb"; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(pad, h-pad); ctx.lineTo(w-pad, h-pad); ctx.stroke();
-      // Profile
-      ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2; ctx.beginPath();
-      elevs.forEach((v, i) => {
-        const x = pad + (i/(elevs.length-1)) * (w-2*pad);
-        const y = pad + (1 - (v-min)/(max-min||1)) * (h-2*pad);
-        if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-      });
-      ctx.stroke();
-      // Labels
-      ctx.fillStyle = "#6b7280"; ctx.font = "12px system-ui, sans-serif";
-      ctx.fillText(`${Math.round(min)} m`, 4, h-pad-2);
-      ctx.fillText(`${Math.round(max)} m`, 4, pad+10);
+    function showPlace(place) {
+      if (searchMarker) searchMarker.setMap(null);
+      const loc = place.geometry.location;
+      map.panTo(loc); map.setZoom(16);
+      searchMarker = new google.maps.Marker({ position: loc, map, title: place.name || place.formatted_address });
+      if (!searchInfoWindow) searchInfoWindow = new google.maps.InfoWindow();
+      searchInfoWindow.setContent(`<div><strong>${place.name || ""}</strong><div>${place.formatted_address || ""}</div></div>`);
+      searchInfoWindow.open(map, searchMarker);
     }
 
-    // ---------- Tracking ----------
-    function setupTracking() {
+    function setupGeoUi() {
       const btn = document.getElementById("trackToggle");
-      btn.addEventListener("click", () => {
-        const active = btn.classList.toggle("active");
-        if (active) startTracking(btn); else stopTracking(btn);
-      });
+      btn.addEventListener("click", () => { if (watchId === null) startTracking(); else stopTracking(); });
     }
-    function startTracking(btn) {
-      if (!navigator.geolocation) return;
-      watchId = navigator.geolocation.watchPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
-      btn.textContent = "Tracking";
+
+    function startTracking() {
+      if (!navigator.geolocation) { setStatus("Geolocation not supported."); return; }
+      setStatus("Requesting location…");
+      watchId = navigator.geolocation.watchPosition(onPos, () => setStatus("Geo error"), { enableHighAccuracy: true });
+      document.getElementById("trackToggle").textContent = "Stop Tracking";
     }
-    function stopTracking(btn) {
+
+    function stopTracking() {
       if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-      if (meMarker) { meMarker.setMap(null); meMarker = null; }
-      if (meAccuracy) { meAccuracy.setMap(null); meAccuracy = null; }
-      btn.textContent = "Track";
-      haveFirstFix = false;
+      if (meMarker) meMarker.setMap(null);
+      if (meAccuracy) meAccuracy.setMap(null);
+      document.getElementById("trackToggle").textContent = "Start Tracking";
     }
+
     function onPos(pos) {
       const lat = pos.coords.latitude, lng = pos.coords.longitude;
       const here = new google.maps.LatLng(lat, lng);
@@ -478,37 +278,19 @@
           icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#1d4ed8", fillOpacity: 1,
                   strokeColor: "white", strokeWeight: 2 }
         });
-        meAccuracy = new google.maps.Circle({ map, center: here, radius: pos.coords.accuracy, strokeOpacity:.4, strokeWeight:1, fillOpacity:.12 });
+        meAccuracy = new google.maps.Circle({ map, center: here, radius: pos.coords.accuracy });
       } else {
         meMarker.setPosition(here);
         meAccuracy.setCenter(here);
-        meAccuracy.setRadius(pos.coords.accuracy);
       }
-      if (!haveFirstFix) { map.panTo(here); map.setZoom(Math.max(map.getZoom(), 15)); haveFirstFix = true; }
-    }
-
-    function addRecenterControl() {
-      const el = document.createElement("div");
-      el.className = "map-control"; el.textContent = "My Location";
-      el.title = "Recenter to your current location";
-      el.onclick = () => { if (meMarker) { map.panTo(meMarker.getPosition()); map.setZoom(Math.max(map.getZoom(), 16)); } };
-      map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(el);
-    }
-
-    // ---------- Utils ----------
-    function formatMeters(m) {
-      if (!isFinite(m)) return "—";
-      if (m >= 1000) return (m/1000).toFixed(2) + " km";
-      return Math.round(m) + " m";
-    }
-    function escapeHtml(s) {
-      return (s||"").toString().replace(/[&<>\"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+      if (!haveFirstFix || followMe) { map.panTo(here); }
+      haveFirstFix = true;
     }
 
     window.initMap = initMap;
   </script>
 
-  <!-- Note: add 'geometry' library for distances -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArEZwQX5ZFYUMJt98r0Hsjzu_9hjaEm4g&libraries=places,geometry&callback=initMap"></script>
+  <!-- Your API key embedded -->
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArEZwQX5ZFYUMJt98r0Hsjzu_9hjaEm4g&libraries=places&callback=initMap"></script>
 </body>
 </html>
