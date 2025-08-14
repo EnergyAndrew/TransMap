@@ -3,28 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TransMap — Hybrid + Unified Search + Live Location</title>
+  <title>TransMap — Minimal Search + Live Location + Incidents</title>
   <style>
     html, body { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
     #map { position: absolute; inset: 0; }
 
-    /* Floating controls */
-    .controls { position: absolute; top: 12px; left: 12px; right: 12px; display: grid;
-      grid-template-columns: 1fr; gap: 8px; z-index: 2; pointer-events: none; }
-    .controls .group { pointer-events: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
-      background: rgba(255,255,255,.95); padding: 8px; border: 1px solid #e5e7eb; border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,.08); }
-    .controls input[type="text"] { flex: 1 1 300px; min-width: 220px; padding: 8px 10px;
-      border: 1px solid #d1d5db; border-radius: 8px; }
-    .btn { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; cursor: pointer; }
-    .btn.primary { background: #2563eb; color: white; border-color: #2563eb; }
-    .muted { color: #374151; font-size: 13px; background: rgba(255,255,255,.95); padding: 6px 10px; border-radius: 8px; }
+    /* Top-centered minimal search */
+    .topbar { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 3;
+      pointer-events: none; width: min(92vw, 780px); display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+    .searchWrap { pointer-events: auto; display:flex; align-items:center; gap:6px; background: rgba(255,255,255,.95);
+      border:1px solid #e5e7eb; border-radius: 999px; padding: 6px 10px; box-shadow: 0 2px 10px rgba(0,0,0,.1); justify-self: center; }
+    .searchWrap svg { opacity: .7; }
+    .searchWrap input { width: min(60vw, 520px); border: none; outline: none; padding: 6px 4px; background: transparent; font-size: 14px; }
+    .iconBtn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+      border-radius: 999px; border:1px solid #e5e7eb; background:white; cursor:pointer; box-shadow:0 1px 6px rgba(0,0,0,.08); }
 
-    /* Unified suggestion list */
-    .suggest { position: absolute; top: 56px; left: 12px; width: min(560px, calc(100% - 24px));
-      max-height: 320px; overflow: auto; z-index: 3; background: white; border: 1px solid #e5e7eb;
-      border-radius: 10px; box-shadow: 0 16px 32px rgba(0,0,0,.18); display: none; }
+    /* Right of search: small pills */
+    .pillRow { pointer-events:auto; display:flex; gap:8px; justify-self: end; }
+    .pillBtn { padding: 6px 10px; border-radius: 999px; border:1px solid #e5e7eb; background:white; cursor:pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08); font-size: 13px; white-space: nowrap; }
+    .pillBtn.active { background:#2563eb; color:white; border-color:#2563eb; }
+
+    /* Unified suggestion list under the search */
+    .suggest { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); width: min(92vw, 640px);
+      max-height: 320px; overflow: auto; z-index: 4; background: white; border: 1px solid #e5e7eb;
+      border-radius: 12px; box-shadow: 0 16px 32px rgba(0,0,0,.18); display: none; }
     .section { padding: 6px 10px; border-top: 1px solid #f1f5f9; }
     .section:first-child { border-top: 0; }
     .section h4 { margin: 6px 2px 6px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
@@ -32,50 +36,126 @@
     .sug-item:hover { background: #f3f4f6; }
     .badge { font-size: 11px; padding: 2px 6px; border: 1px solid #d1d5db; border-radius: 999px; color: #374151; background: #f9fafb; }
 
-    /* Custom map control */
-    .map-control { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px 10px; margin: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,.1); cursor: pointer; font-size: 13px; }
+    /* Bottom-right small controls */
+    .controlsBR { position: absolute; right: 10px; bottom: 10px; z-index: 3; display: grid; gap: 6px; }
+    .map-control { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.1); cursor: pointer; font-size: 13px; white-space: nowrap; }
+
+    /* Incident modal */
+    .modal { position: fixed; inset: 0; display:none; align-items: center; justify-content: center; z-index: 10; }
+    .modalBackdrop { position:absolute; inset:0; background: rgba(0,0,0,.35); }
+    .modalCard { position: relative; width: min(92vw, 520px); background: white; border:1px solid #e5e7eb; border-radius: 12px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.28); padding: 14px; }
+    .modalHeader { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; }
+    .modalHeader h3 { margin: 0; font-size: 16px; }
+    .modalBody { display: grid; gap: 8px; }
+    .modalBody label { font-size: 13px; color: #374151; }
+    .modalBody input[type="text"], .modalBody textarea { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; }
+    .modalFooter { display:flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+    .btn { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; cursor: pointer; }
+    .btn.primary { background: #2563eb; color: white; border-color: #2563eb; }
+    .btn.danger { background: #ef4444; color: white; border-color: #ef4444; }
 
     @media (max-width: 700px) {
-      .controls { grid-template-columns: 1fr; }
-      .suggest { left: 12px; width: calc(100% - 24px); }
+      .searchWrap input { width: min(76vw, 300px); }
+      .suggest { width: min(94vw, 540px); }
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
-  <div class="controls">
-    <!-- Search & Tracking -->
-    <div class="group" style="position: relative;">
-      <input id="placeSearch" type="text" placeholder="Search address/place or KML object name…">
-      <button id="clearSearch" class="btn">Clear</button>
-      <button id="trackToggle" class="btn primary">Start Tracking</button>
-      <span id="status" class="muted">Ready</span>
+  <!-- Top-centered search + pills -->
+  <div class="topbar">
+    <div class="searchWrap">
+      <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M10 18a8 8 0 1 1 5.293-14.293A8 8 0 0 1 10 18m8.707 1.293l-3.97-3.97A10 10 0 1 0 12 22a10 10 0 0 0 6.05-2.06l3.97 3.97z"/></svg>
+      <input id="placeSearch" type="text" placeholder="Search address/place or KML name…" />
+      <button id="clearSearch" class="iconBtn" title="Clear">
+        <svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      </button>
+    </div>
+    <div class="pillRow">
+      <button id="incidentBtn" class="pillBtn" title="Add incident">Add Incident</button>
+      <button id="exportBtn" class="pillBtn" title="Export incidents to GeoJSON">Export</button>
+      <button id="reloadBtn" class="pillBtn" title="Reload incidents from URL">Reload</button>
+    </div>
+  </div>
 
-      <!-- Unified suggestion box -->
-      <div id="suggest" class="suggest">
-        <div id="placesSection" class="section" style="display:none;">
-          <h4>Places</h4>
-          <div id="placesBody"></div>
+  <!-- Unified suggestion dropdown (centered) -->
+  <div id="suggest" class="suggest">
+    <div id="placesSection" class="section" style="display:none;">
+      <h4>Places</h4>
+      <div id="placesBody"></div>
+    </div>
+    <div id="kmlSection" class="section" style="display:none;">
+      <h4>KML</h4>
+      <div id="kmlBody"></div>
+    </div>
+  </div>
+
+  <!-- Bottom-right controls -->
+  <div class="controlsBR">
+    <div id="trackToggle" class="map-control" title="Start/Stop location">Start Tracking</div>
+    <div id="recenterBtn" class="map-control" title="Recenter to your current location">My Location</div>
+  </div>
+
+  <!-- Incident modal -->
+  <div id="incidentModal" class="modal" aria-hidden="true">
+    <div class="modalBackdrop"></div>
+    <div class="modalCard" role="dialog" aria-modal="true">
+      <div class="modalHeader">
+        <h3 id="modalTitle">New Incident</h3>
+        <button class="btn" id="closeModal">Close</button>
+      </div>
+      <div class="modalBody">
+        <div>
+          <label for="incTitle">Title</label>
+          <input type="text" id="incTitle" placeholder="Short summary (e.g., Conductor damage near Tower 14)" />
         </div>
-        <div id="kmlSection" class="section" style="display:none;">
-          <h4>KML</h4>
-          <div id="kmlBody"></div>
+        <div>
+          <label for="incDesc">Details</label>
+          <textarea id="incDesc" rows="3" placeholder="Notes, IDs, etc."></textarea>
         </div>
+        <div>
+          <label for="incLink">Hyperlink (optional)</label>
+          <input type="text" id="incLink" placeholder="Paste a link to ticket / photos / document" />
+        </div>
+      </div>
+      <div class="modalFooter">
+        <button class="btn danger" id="deleteIncident" style="display:none;">Delete</button>
+        <button class="btn" id="saveLocal">Save (Local only)</button>
+        <button class="btn primary" id="saveIncident">Save</button>
       </div>
     </div>
   </div>
 
   <script>
+    // ---- CONFIG ----
     const KML_URL = "https://raw.githubusercontent.com/EnergyAndrew/TransMap/refs/heads/master/TM12022024V1.kml";
-    let map, kmlLayer = null, kmlIndex = [], kmlReady = false;
-    let searchMarker = null, searchInfoWindow = null;
-    let acService = null, placesService = null, acToken = null, acTimer = null;
-    let watchId = null, meMarker = null, meAccuracy = null, followMe = true, haveFirstFix = false;
+    // Optional hosted GeoJSON of incidents (you can host this in your repo as incidents.geojson)
+    const INCIDENTS_URL = "https://energyandrew.github.io/TransMap/incidents.geojson";
 
-    const statusEl = document.getElementById("status");
-    function setStatus(msg) { statusEl.textContent = msg; }
+    let map;
+    let kmlLayer = null;
+    let kmlIndex = []; // { name, type, position: LatLng }
+    let kmlReady = false;
+
+    // Search
+    let acService = null, placesService = null, acToken = null;
+    let searchMarker = null, searchInfoWindow = null;
+
+    // Geolocation
+    let watchId = null, meMarker = null, meAccuracy = null, haveFirstFix = false;
+
+    // Incidents
+    let incidents = []; // array of {id, title, desc, link, lat, lng, createdAt, updatedAt}
+    let incidentMarkers = new Map(); // id -> google.maps.Marker
+    let addingIncident = false;
+    let editingIncidentId = null;
+    let pendingLatLng = null;
+
+    // Storage keys
+    const LS_KEY = "transmap_incidents_v1";
 
     function initMap() {
       map = new google.maps.Map(document.getElementById("map"), {
@@ -86,40 +166,36 @@
         fullscreenControl: true,
         mapTypeId: google.maps.MapTypeId.HYBRID
       });
-      loadKmlLayer();
-      buildKmlIndex();
-      setupUnifiedSearch();
-      setupGeoUi();
 
-      const recenterDiv = document.createElement("div");
-      recenterDiv.className = "map-control";
-      recenterDiv.textContent = "My Location";
-      recenterDiv.title = "Recenter to your current location";
-      recenterDiv.addEventListener("click", () => {
-        if (meMarker) {
-          map.panTo(meMarker.getPosition());
-          map.setZoom(Math.max(map.getZoom(), 16));
-        } else { setStatus("No location yet. Start Tracking first."); }
+      // Native KML overlay for visuals
+      loadKmlLayer();
+
+      // Build KML name index (for search)
+      buildKmlIndex();
+
+      // Services for Places
+      acService = new google.maps.places.AutocompleteService();
+      placesService = new google.maps.places.PlacesService(map);
+      acToken = new google.maps.places.AutocompleteSessionToken();
+
+      setupUnifiedSearch();
+      setupGeoControls();
+      setupIncidentsUI();
+
+      // Load incidents (URL first, local fallback/merge)
+      loadIncidentsFromUrl().finally(() => {
+        loadIncidentsFromLocal();
+        renderIncidents();
       });
-      map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(recenterDiv);
     }
 
     function loadKmlLayer() {
       if (kmlLayer) kmlLayer.setMap(null);
-      const bust = KML_URL.includes("?") ? "&" + Date.now() : "?" + Date.now();
-      kmlLayer = new google.maps.KmlLayer({
-        url: KML_URL + bust,
-        map,
-        preserveViewport: false,
-        suppressInfoWindows: false,
-      });
-      google.maps.event.addListenerOnce(kmlLayer, "defaultviewport_changed", () => {
-        setStatus("KML loaded");
-      });
+      const bust = KML_URL + (KML_URL.includes("?") ? "&" : "?") + Date.now();
+      kmlLayer = new google.maps.KmlLayer({ url: bust, map, preserveViewport: false, suppressInfoWindows: false });
     }
 
     async function buildKmlIndex() {
-      setStatus("Indexing KML…");
       try {
         const resp = await fetch(KML_URL, { cache: "no-store" });
         const txt = await resp.text();
@@ -127,31 +203,58 @@
         const placemarks = Array.from(dom.getElementsByTagName("Placemark"));
         const idx = [];
         for (const pm of placemarks) {
-          const nameNode = pm.getElementsByTagName("name")[0];
-          const name = (nameNode && nameNode.textContent.trim()) || "Placemark";
+          const name = (pm.getElementsByTagName("name")[0]?.textContent || "Placemark").trim();
           let pos = null;
+          // Prefer Point
           const point = pm.getElementsByTagName("Point")[0];
           if (point) {
-            const coords = getFirstCoords(point);
-            if (coords) pos = new google.maps.LatLng(coords.lat, coords.lng);
+            const c = getFirstCoords(point);
+            if (c) pos = new google.maps.LatLng(c.lat, c.lng);
           }
-          if (pos) idx.push({ name, type: "Point", position: pos });
+          // Fallback: centroid of LineString or Polygon
+          if (!pos) {
+            const ls = pm.getElementsByTagName("LineString")[0];
+            const poly = pm.getElementsByTagName("Polygon")[0];
+            const centroid = centroidOfCoords(ls || poly);
+            if (centroid) pos = new google.maps.LatLng(centroid.lat, centroid.lng);
+          }
+          if (pos) {
+            const type = point ? "Point" : (pm.getElementsByTagName("LineString")[0] ? "Path" : "Area");
+            idx.push({ name, type, position: pos });
+          }
         }
         kmlIndex = idx;
         kmlReady = true;
-        setStatus(`KML indexed: ${idx.length} items`);
       } catch (e) {
-        setStatus("Failed to index KML names");
+        console.error("Failed to index KML names", e);
       }
     }
 
     function getFirstCoords(node) {
-      const c = node.getElementsByTagName("coordinates")[0];
+      const c = node?.getElementsByTagName("coordinates")[0];
       if (!c) return null;
-      const parts = c.textContent.trim().split(",");
-      return { lat: parseFloat(parts[1]), lng: parseFloat(parts[0]) };
+      const parts = c.textContent.trim().split(/\s+/)[0].split(",");
+      if (parts.length < 2) return null;
+      const lng = parseFloat(parts[0]), lat = parseFloat(parts[1]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return { lat, lng };
     }
 
+    function centroidOfCoords(node) {
+      if (!node) return null;
+      const c = node.getElementsByTagName("coordinates")[0];
+      if (!c) return null;
+      const coords = c.textContent.trim().split(/\s+/).map(s => s.split(",")).filter(a => a.length >= 2);
+      let n = 0, sumLat = 0, sumLng = 0;
+      for (const a of coords) {
+        const lng = parseFloat(a[0]), lat = parseFloat(a[1]);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) { sumLat += lat; sumLng += lng; n++; }
+      }
+      if (!n) return null;
+      return { lat: sumLat / n, lng: sumLng / n };
+    }
+
+    // ---------- Unified Search (no native UI overlap) ----------
     function setupUnifiedSearch() {
       const input = document.getElementById("placeSearch");
       const clearBtn = document.getElementById("clearSearch");
@@ -160,36 +263,39 @@
       const kmlSection = document.getElementById("kmlSection");
       const placesBody = document.getElementById("placesBody");
       const kmlBody = document.getElementById("kmlBody");
-
-      acService = new google.maps.places.AutocompleteService();
-      placesService = new google.maps.places.PlacesService(map);
-      acToken = new google.maps.places.AutocompleteSessionToken();
+      let acTimer = null;
 
       const doSearch = async () => {
         const q = input.value.trim();
         if (!q) { suggest.style.display = "none"; return; }
+
+        // 1) Places predictions
         let placePreds = [];
-        const req = { input: q, sessionToken: acToken, types: ["geocode"] };
         try {
           await new Promise(resolve => {
-            acService.getPlacePredictions(req, preds => { placePreds = preds || []; resolve(); });
+            acService.getPlacePredictions({ input: q, sessionToken: acToken, types: ["geocode"] }, preds => {
+              placePreds = preds || []; resolve();
+            });
           });
         } catch (e) { placePreds = []; }
 
+        // 2) KML name matches
         let kmlMatches = [];
         if (kmlReady && q.length >= 2) {
           const lower = q.toLowerCase();
           kmlMatches = kmlIndex.filter(it => it.name.toLowerCase().includes(lower)).slice(0, 12);
         }
 
+        // Render unified dropdown
         placesBody.innerHTML = "";
         kmlBody.innerHTML = "";
+
         if (placePreds.length) {
           placesSection.style.display = "block";
-          placePreds.forEach(p => {
+          placePreds.slice(0, 7).forEach(p => {
             const item = document.createElement("div");
             item.className = "sug-item";
-            item.innerHTML = `<span>${p.description}</span><span class="badge">Place</span>`;
+            item.innerHTML = `<span>${escapeHtml(p.description)}</span><span class="badge">Place</span>`;
             item.addEventListener("click", () => onChoosePlacePrediction(p));
             placesBody.appendChild(item);
           });
@@ -200,8 +306,8 @@
           kmlMatches.forEach(m => {
             const item = document.createElement("div");
             item.className = "sug-item";
-            item.innerHTML = `<span>${m.name}</span><span class="badge">${m.type}</span>`;
-            item.addEventListener("click", () => { gotoKmlItem(m); suggest.style.display = "none"; });
+            item.innerHTML = `<span>${escapeHtml(m.name)}</span><span class="badge">${m.type}</span>`;
+            item.addEventListener("click", () => { suggest.style.display = "none"; gotoKmlItem(m); });
             kmlBody.appendChild(item);
           });
         } else { kmlSection.style.display = "none"; }
@@ -210,23 +316,40 @@
       };
 
       input.addEventListener("input", () => { clearTimeout(acTimer); acTimer = setTimeout(doSearch, 180); });
+      input.addEventListener("focus", () => { clearTimeout(acTimer); acTimer = setTimeout(doSearch, 1); });
+
+      // Enter key: pick first place, else first KML
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const firstPlace = placesBody.firstElementChild;
+          const firstKml = kmlBody.firstElementChild;
+          if (firstPlace) { firstPlace.click(); e.preventDefault(); return; }
+          if (firstKml) { firstKml.click(); e.preventDefault(); return; }
+        }
+      });
+
+      // Hide suggestions when clicking outside
+      document.addEventListener("click", (e) => {
+        if (!suggest.contains(e.target) && e.target !== input) suggest.style.display = "none";
+      });
+
       clearBtn.addEventListener("click", () => {
         input.value = ""; suggest.style.display = "none";
         if (searchMarker) { searchMarker.setMap(null); searchMarker = null; }
         if (searchInfoWindow) searchInfoWindow.close();
+        acToken = new google.maps.places.AutocompleteSessionToken();
       });
     }
 
     function onChoosePlacePrediction(pred) {
+      if (!placesService) return;
       placesService.getDetails({
         placeId: pred.place_id,
         fields: ["geometry", "name", "formatted_address"]
       }, (place, status) => {
-        if (status !== google.maps.places.PlacesServiceStatus.OK || !place || !place.geometry) {
-          setStatus("Failed to get place details");
-          return;
-        }
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !place || !place.geometry) return;
         showPlace(place);
+        acToken = new google.maps.places.AutocompleteSessionToken();
       });
     }
 
@@ -236,41 +359,48 @@
       map.panTo(it.position);
       map.setZoom(16);
       if (!searchInfoWindow) searchInfoWindow = new google.maps.InfoWindow();
-      searchInfoWindow.setContent(`<div><strong>${it.name}</strong></div>`);
+      searchInfoWindow.setContent(`<div><strong>${escapeHtml(it.name)}</strong><div>KML ${it.type}</div></div>`);
       searchInfoWindow.open(map, searchMarker);
     }
 
     function showPlace(place) {
-      if (searchMarker) searchMarker.setMap(null);
+      if (searchMarker) { searchMarker.setMap(null); searchMarker = null; }
       const loc = place.geometry.location;
+      searchMarker = new google.maps.Marker({ position: loc, map, title: place.name || place.formatted_address || "Result" });
       map.panTo(loc); map.setZoom(16);
-      searchMarker = new google.maps.Marker({ position: loc, map, title: place.name || place.formatted_address });
       if (!searchInfoWindow) searchInfoWindow = new google.maps.InfoWindow();
-      searchInfoWindow.setContent(`<div><strong>${place.name || ""}</strong><div>${place.formatted_address || ""}</div></div>`);
+      searchInfoWindow.setContent(`<div><strong>${escapeHtml(place.name || "")}</strong><div>${escapeHtml(place.formatted_address || "")}</div></div>`);
       searchInfoWindow.open(map, searchMarker);
     }
 
-    function setupGeoUi() {
-      const btn = document.getElementById("trackToggle");
-      btn.addEventListener("click", () => { if (watchId === null) startTracking(); else stopTracking(); });
+    // ---------- Live location controls ----------
+    function setupGeoControls() {
+      const trackEl = document.getElementById("trackToggle");
+      const recenterEl = document.getElementById("recenterBtn");
+      trackEl.addEventListener("click", () => {
+        if (watchId === null) startTracking(trackEl); else stopTracking(trackEl);
+      });
+      recenterEl.addEventListener("click", () => {
+        if (meMarker) { map.panTo(meMarker.getPosition()); map.setZoom(Math.max(map.getZoom(), 16)); }
+      });
     }
 
-    function startTracking() {
-      if (!navigator.geolocation) { setStatus("Geolocation not supported."); return; }
-      setStatus("Requesting location…");
-      watchId = navigator.geolocation.watchPosition(onPos, () => setStatus("Geo error"), { enableHighAccuracy: true });
-      document.getElementById("trackToggle").textContent = "Stop Tracking";
+    function startTracking(el) {
+      if (!navigator.geolocation) { el.textContent = "Geo not supported"; return; }
+      el.textContent = "Stop Tracking";
+      watchId = navigator.geolocation.watchPosition(onPos, onGeoErr, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
     }
 
-    function stopTracking() {
+    function stopTracking(el) {
       if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-      if (meMarker) meMarker.setMap(null);
-      if (meAccuracy) meAccuracy.setMap(null);
-      document.getElementById("trackToggle").textContent = "Start Tracking";
+      if (meMarker) { meMarker.setMap(null); meMarker = null; }
+      if (meAccuracy) { meAccuracy.setMap(null); meAccuracy = null; }
+      haveFirstFix = false;
+      el.textContent = "Start Tracking";
     }
 
     function onPos(pos) {
-      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      const lat = pos.coords.latitude, lng = pos.coords.longitude, acc = pos.coords.accuracy || 0;
       const here = new google.maps.LatLng(lat, lng);
       if (!meMarker) {
         meMarker = new google.maps.Marker({
@@ -278,19 +408,291 @@
           icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: "#1d4ed8", fillOpacity: 1,
                   strokeColor: "white", strokeWeight: 2 }
         });
-        meAccuracy = new google.maps.Circle({ map, center: here, radius: pos.coords.accuracy });
+        meAccuracy = new google.maps.Circle({ map, center: here, radius: acc, strokeOpacity:.4, strokeWeight:1, fillOpacity:.12 });
       } else {
         meMarker.setPosition(here);
         meAccuracy.setCenter(here);
+        meAccuracy.setRadius(acc);
       }
-      if (!haveFirstFix || followMe) { map.panTo(here); }
-      haveFirstFix = true;
+      if (!haveFirstFix) { map.panTo(here); map.setZoom(Math.max(map.getZoom(), 15)); haveFirstFix = true; }
+    }
+
+    function onGeoErr(err) {
+      const el = document.getElementById("trackToggle");
+      el.textContent = "Start Tracking";
+    }
+
+    // ---------- Incidents ----------
+    function setupIncidentsUI() {
+      const btn = document.getElementById("incidentBtn");
+      const exportBtn = document.getElementById("exportBtn");
+      const reloadBtn = document.getElementById("reloadBtn");
+      btn.addEventListener("click", () => {
+        addingIncident = !addingIncident;
+        btn.classList.toggle("active", addingIncident);
+        btn.textContent = addingIncident ? "Click map…" : "Add Incident";
+      });
+
+      map.addListener("click", (e) => {
+        if (!addingIncident) return;
+        pendingLatLng = e.latLng;
+        openIncidentModal(null); // new incident
+      });
+
+      exportBtn.addEventListener("click", () => {
+        const fc = incidentsToGeoJSON();
+        const blob = new Blob([JSON.stringify(fc, null, 2)], { type: "application/geo+json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = "incidents.geojson"; a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      reloadBtn.addEventListener("click", () => {
+        loadIncidentsFromUrl(true);
+      });
+
+      // Modal handlers
+      document.getElementById("closeModal").addEventListener("click", closeIncidentModal);
+      document.getElementById("saveIncident").addEventListener("click", () => saveIncident(false));
+      document.getElementById("saveLocal").addEventListener("click", () => saveIncident(true));
+      document.getElementById("deleteIncident").addEventListener("click", deleteIncident);
+    }
+
+    function openIncidentModal(incident) {
+      const modal = document.getElementById("incidentModal");
+      const delBtn = document.getElementById("deleteIncident");
+      const titleEl = document.getElementById("incTitle");
+      const descEl = document.getElementById("incDesc");
+      const linkEl = document.getElementById("incLink");
+      const header = document.getElementById("modalTitle");
+
+      if (incident) {
+        editingIncidentId = incident.id;
+        header.textContent = "Edit Incident";
+        titleEl.value = incident.title || "";
+        descEl.value = incident.desc || "";
+        linkEl.value = incident.link || "";
+        delBtn.style.display = "inline-block";
+      } else {
+        editingIncidentId = null;
+        header.textContent = "New Incident";
+        titleEl.value = "";
+        descEl.value = "";
+        linkEl.value = "";
+        delBtn.style.display = "none";
+      }
+
+      modal.style.display = "flex";
+      modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeIncidentModal() {
+      const modal = document.getElementById("incidentModal");
+      modal.style.display = "none";
+      modal.setAttribute("aria-hidden", "true");
+      pendingLatLng = null;
+      editingIncidentId = null;
+      document.getElementById("incidentBtn").classList.remove("active");
+      addingIncident = false;
+      document.getElementById("incidentBtn").textContent = "Add Incident";
+    }
+
+    function sanitizeUrl(url) {
+      if (!url) return "";
+      try {
+        const u = new URL(url, window.location.href);
+        // Allow http(s) only
+        if (u.protocol === "http:" || u.protocol === "https:") return u.toString();
+      } catch (_) {}
+      return "";
+    }
+
+    function saveIncident(localOnly) {
+      const title = document.getElementById("incTitle").value.trim();
+      const desc = document.getElementById("incDesc").value.trim();
+      const link = sanitizeUrl(document.getElementById("incLink").value.trim());
+
+      if (editingIncidentId) {
+        const idx = incidents.findIndex(i => i.id === editingIncidentId);
+        if (idx >= 0) {
+          incidents[idx].title = title;
+          incidents[idx].desc = desc;
+          incidents[idx].link = link;
+          incidents[idx].updatedAt = new Date().toISOString();
+          updateIncidentMarker(incidents[idx]);
+        }
+      } else {
+        if (!pendingLatLng) { alert("Click the map to place the incident."); return; }
+        const inc = {
+          id: "inc_" + Date.now() + "_" + Math.random().toString(36).slice(2,8),
+          title, desc, link,
+          lat: pendingLatLng.lat(), lng: pendingLatLng.lng(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        incidents.push(inc);
+        addIncidentMarker(inc);
+      }
+
+      // Persist to localStorage always
+      saveIncidentsToLocal();
+
+      // If not localOnly, we still can't push to GitHub from the browser without a token;
+      // users will use Export → commit incidents.geojson to repo (see instructions).
+      if (!localOnly) {
+        alert("Saved locally. Use Export to create incidents.geojson, then commit it to your repo for permanence.");
+      }
+
+      closeIncidentModal();
+    }
+
+    function deleteIncident() {
+      if (!editingIncidentId) return;
+      incidents = incidents.filter(i => i.id !== editingIncidentId);
+      const m = incidentMarkers.get(editingIncidentId);
+      if (m) { m.setMap(null); incidentMarkers.delete(editingIncidentId); }
+      saveIncidentsToLocal();
+      closeIncidentModal();
+    }
+
+    function addIncidentMarker(inc) {
+      const m = new google.maps.Marker({
+        position: { lat: inc.lat, lng: inc.lng },
+        map,
+        title: inc.title || "Incident",
+        icon: {
+          path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+          scale: 5,
+          fillColor: "#dc2626",
+          fillOpacity: 1,
+          strokeColor: "white",
+          strokeWeight: 2
+        }
+      });
+      m.addListener("click", () => {
+        const html = renderIncidentInfo(inc);
+        const iw = new google.maps.InfoWindow({ content: html });
+        iw.open(map, m);
+        // Hook up edit link
+        google.maps.event.addListenerOnce(iw, "domready", () => {
+          const editBtn = document.getElementById("edit_"+inc.id);
+          if (editBtn) editBtn.onclick = () => openIncidentModal(inc);
+        });
+      });
+      incidentMarkers.set(inc.id, m);
+    }
+
+    function updateIncidentMarker(inc) {
+      const m = incidentMarkers.get(inc.id);
+      if (!m) return;
+      m.setTitle(inc.title || "Incident");
+      // Info window will render fresh on next click
+    }
+
+    function renderIncidentInfo(inc) {
+      const safeTitle = escapeHtml(inc.title || "Incident");
+      const safeDesc = escapeHtml(inc.desc || "");
+      const linkHtml = inc.link ? `<div><a href="${inc.link}" target="_blank" rel="noopener">Open link ↗</a></div>` : "";
+      const when = new Date(inc.updatedAt || inc.createdAt || Date.now()).toLocaleString();
+      return `<div style="max-width:260px">
+        <div style="font-weight:600;margin-bottom:4px">${safeTitle}</div>
+        <div style="font-size:13px; white-space:pre-wrap">${safeDesc}</div>
+        ${linkHtml}
+        <div style="color:#6b7280; font-size:12px; margin-top:6px;">${when}</div>
+        <div style="margin-top:8px;">
+          <button id="edit_${inc.id}" style="padding:6px 10px; border:1px solid #d1d5db; border-radius:6px; background:white; cursor:pointer;">Edit</button>
+        </div>
+      </div>`;
+    }
+
+    function renderIncidents() {
+      // Clear existing markers
+      incidentMarkers.forEach(m => m.setMap(null));
+      incidentMarkers.clear();
+      // Render all
+      incidents.forEach(addIncidentMarker);
+    }
+
+    // ----- Persistence (Local + Optional URL) -----
+    function saveIncidentsToLocal() {
+      try { localStorage.setItem(LS_KEY, JSON.stringify(incidents)); } catch(_) {}
+    }
+    function loadIncidentsFromLocal() {
+      try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return;
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          // Merge: prefer local edits (by id)
+          const idx = new Map(arr.map(i => [i.id, i]));
+          incidents = mergeById(incidents, arr);
+        }
+      } catch(_) {}
+    }
+    function mergeById(baseArr, overlayArr) {
+      const map = new Map(baseArr.map(i => [i.id, i]));
+      overlayArr.forEach(i => map.set(i.id, i));
+      return Array.from(map.values());
+    }
+
+    async function loadIncidentsFromUrl(force=false) {
+      if (!INCIDENTS_URL) return;
+      try {
+        const url = INCIDENTS_URL + (INCIDENTS_URL.includes("?") ? "&" : "?") + Date.now();
+        const resp = await fetch(url, { cache: "no-store" });
+        if (!resp.ok) throw new Error("HTTP "+resp.status);
+        const gj = await resp.json();
+        if (gj && gj.type === "FeatureCollection" && Array.isArray(gj.features)) {
+          const fromUrl = gj.features.map(f => ({
+            id: f.id || (f.properties && f.properties.id) || "inc_" + Math.random().toString(36).slice(2,8),
+            title: f.properties?.title || "",
+            desc: f.properties?.desc || f.properties?.description || "",
+            link: sanitizeUrl(f.properties?.link || ""),
+            lat: f.geometry?.coordinates ? f.geometry.coordinates[1] : null,
+            lng: f.geometry?.coordinates ? f.geometry.coordinates[0] : null,
+            createdAt: f.properties?.createdAt || new Date().toISOString(),
+            updatedAt: f.properties?.updatedAt || f.properties?.createdAt || new Date().toISOString()
+          })).filter(i => Number.isFinite(i.lat) && Number.isFinite(i.lng));
+          incidents = mergeById(fromUrl, incidents);
+          if (force) { saveIncidentsToLocal(); }
+          renderIncidents();
+          alert("Incidents reloaded from URL.");
+        }
+      } catch (e) {
+        if (force) alert("Failed to reload incidents from URL.");
+        console.warn("No incidents from URL:", e);
+      }
+    }
+
+    function incidentsToGeoJSON() {
+      return {
+        type: "FeatureCollection",
+        features: incidents.map(i => ({
+          type: "Feature",
+          id: i.id,
+          properties: {
+            id: i.id,
+            title: i.title || "",
+            desc: i.desc || "",
+            link: i.link || "",
+            createdAt: i.createdAt || "",
+            updatedAt: i.updatedAt || ""
+          },
+          geometry: { type: "Point", coordinates: [i.lng, i.lat] }
+        }))
+      };
+    }
+
+    // ---------- Utils ----------
+    function escapeHtml(s) {
+      return (s||"").toString().replace(/[&<>\"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
     }
 
     window.initMap = initMap;
   </script>
 
-  <!-- Your API key embedded -->
+  <!-- Maps JS with Places library -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArEZwQX5ZFYUMJt98r0Hsjzu_9hjaEm4g&libraries=places&callback=initMap"></script>
 </body>
 </html>
