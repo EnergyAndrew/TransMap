@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "inc_1755198499094_0egtyo",
+      "properties": {
+        "id": "inc_1755198499094_0egtyo",
+        "title": "Broken Insulator",
+        "desc": "Road phase, broken insulator, contacted distribution, brush fire.",
+        "link": "https://loitoa.puget.com/itoa/autooutage/view.htmlx?editedOutage.appId=32,709",
+        "createdAt": "2025-08-14T19:08:19.094Z",
+        "updatedAt": "2025-08-14T19:08:19.095Z"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.02547844516126,
+          47.228276570595725
+        ]
+      }
+    }
+  ]
+}
