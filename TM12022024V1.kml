@@ -50,7 +50,7 @@
 		]]></description>
                 <Style>
                     <LineStyle>
-                        <color>FFFF0000</color>
+                        <color>FF0000FF</color>
                         <width>3</width>
                     </LineStyle>
                 </Style>
@@ -209,7 +209,7 @@
                 <description>A tap off the main line</description>
                 <Style>
                     <LineStyle>
-                        <color>FFFF0000</color>
+                        <color>FF0000FF</color>
                         <width>3</width>
                     </LineStyle>
                 </Style>
@@ -42168,4 +42168,5 @@
 	</Placemark>
 </Document>
 </kml>
+
 
