@@ -33,7 +33,7 @@
 <Style id="FaultInd">
   <IconStyle>
     <Icon>
-      <href>https://maps.google.com/mapfiles/kml/pal4/icon52.png</href>
+      <href>https://maps.google.com/mapfiles/kml/paddle/ylw-stars-lv.png</href>
       <scale>1.0</scale>
     </Icon>    
   </IconStyle>
@@ -42196,6 +42196,7 @@
 	</Placemark>
 </Document>
 </kml>
+
 
 
 
