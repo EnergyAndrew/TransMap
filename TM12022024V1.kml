@@ -30,8 +30,16 @@
     </Icon>    
   </IconStyle>
 </Style>
+<Style id="FaultInd">
+  <IconStyle>
+    <Icon>
+      <href>https://maps.google.com/mapfiles/kml/pal4/icon52.png</href>
+      <scale>1.0</scale>
+    </Icon>    
+  </IconStyle>
+</Style>
         <Placemark>
-            <name>Electron Heights - Stevenson 55kV</name>
+            <name>Electron Heights - Krain Corner 115kV</name>
                 <description><![CDATA[
 			<font size=2>TLN #035</font><br>
 			<a href="https://pseecm.puget.com/otcs/llisapi.dll?func=ll&objId=49974092&objAction=viewheader"
@@ -197,7 +205,7 @@
                 </LineString>
         </Placemark>
         <Placemark>
-            <name>Electron Heights - Stevenson 55kV (Wilkeson Tap)</name>
+            <name>Electron Heights - Krain Corner 115kV (Wilkeson Tap)</name>
                 <description>A tap off the main line</description>
                 <Style>
                     <LineStyle>
@@ -39479,6 +39487,17 @@
 			<coordinates>-122.823599, 46.975209</coordinates>
 		</Point>
 	</Placemark>
+	<Placemark>
+		<name>NEW BUCKLEY</name>
+		<styleUrl>#SubStyle</styleUrl>
+		<description><![CDATA[
+<b><font size=2>Station Code: BUC_NEW</font></b><br>
+<font size=2>Address:29110 112th St E, Buckley</font><br>
+]]></description>
+		<Point>
+			<coordinates>-122.04106699847739, 47.15697245660781</coordinates>
+		</Point>
+	</Placemark>
     <Placemark>
 		<name>PDN-7084</name>
 		<styleUrl>#Pole</styleUrl>
@@ -42103,5 +42122,50 @@
 			<coordinates>-121.66875117040266, 47.44106151127946</coordinates>
 		</Point>
 	</Placemark>
+	<Placemark>
+		<name>Electron Heights - Krain Corner Fault Indicator</name>
+		<styleUrl>#FaultInd</styleUrl>
+		<description><![CDATA[
+<font size=2>Address: 18804 WA-165, Carbonado</font><br>
+<font size=2>Grid#: 564386-161347</font><br>
+ ]]></description>
+		<Point>
+			<coordinates>-122.05294047739174, 47.08829796621491</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark>
+		<name>Electron Heights - Krain Corner Fault Indicator</name>
+		<styleUrl>#FaultInd</styleUrl>
+		<description><![CDATA[
+<font size=2>Address: 217 Railway Ave, Carbonado</font><br>
+<font size=2>Grid#: 563948-161297</font><br>
+ ]]></description>
+		<Point>
+			<coordinates>-122.05493265827464, 47.07645370681962</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark>
+		<name>Electron Heights - Krain Corner Fault Indicator</name>
+		<styleUrl>#FaultInd</styleUrl>
+		<description><![CDATA[
+<font size=2>Address: Patterson Rd E, Orting ROW Crossing</font><br>
+<font size=2>Grid#: 563547-160189</font><br>
+ ]]></description>
+		<Point>
+			<coordinates>-122.1014749202119, 47.06419365871421</coordinates>
+		</Point>
+	</Placemark>
+	<Placemark>
+		<name>Electron Heights - Krain Corner Fault Indicator</name>
+		<styleUrl>#FaultInd</styleUrl>
+		<description><![CDATA[
+<font size=2>Address: Fisk Rd E, Orting ROW Crossing</font><br>
+<font size=2>Grid#: 561835-158664</font><br>
+ ]]></description>
+		<Point>
+			<coordinates>-122.15868298460089, 47.016968283239535</coordinates>
+		</Point>
+	</Placemark>
 </Document>
 </kml>
+
