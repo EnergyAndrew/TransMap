@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>PSE Transmission System</title>
+  <style>
+    html, body, #map_canvas { width: 100%; height: 100%; margin: 0; padding: 0; }
+    #search-panel {
+      position: absolute; top: 10px; left: 50%; z-index: 5;
+      width: min(400px, calc(100% - 40px));
+      transform: translateX(-50%); background: #fff; border: 1px solid #ccc;
+    }
+    #target { box-sizing: border-box; width: 100%; padding: 10px; border: 0; font-size: 16px; }
+    #status {
+      position: absolute; bottom: 24px; left: 10px; z-index: 5;
+      padding: 8px 10px; border-radius: 4px; background: rgba(255,255,255,.94);
+      box-shadow: 0 1px 4px rgba(0,0,0,.3); font: 13px/1.35 Arial, sans-serif;
+    }
+    #status:empty { display: none; }
+  </style>
+  <script>
+    const GEOJSON_URL = 'https://raw.githubusercontent.com/EnergyAndrew/TransMap/refs/heads/master/TM12022024V1.geojson';
+    let map;
+    let infoWindow;
+
+    function setStatus(message, error = false) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.style.color = error ? '#b00020' : '#222';
+    }
+
+    function featureStyle(feature) {
+      const iconUrl = feature.getProperty('iconUrl');
+      const iconScale = Number(feature.getProperty('iconScale')) || 1;
+      const style = {
+        strokeColor: feature.getProperty('stroke') || '#ff0000',
+        strokeOpacity: Number(feature.getProperty('stroke-opacity') ?? 1),
+        strokeWeight: Number(feature.getProperty('stroke-width')) || 2,
+        fillColor: feature.getProperty('fill') || '#4285f4',
+        fillOpacity: Number(feature.getProperty('fill-opacity') ?? 0.35),
+        clickable: true,
+        visible: true
+      };
+      if (iconUrl) {
+        style.icon = {
+          url: iconUrl,
+          scaledSize: new google.maps.Size(32 * iconScale, 32 * iconScale)
+        };
+      }
+      return style;
+    }
+
+    function geometryLengthMeters(geometry) {
+      if (!geometry) return 0;
+      const type = geometry.getType();
+      if (type === 'LineString') {
+        return google.maps.geometry.spherical.computeLength(geometry.getArray());
+      }
+      if (type === 'MultiLineString' || type === 'GeometryCollection') {
+        return geometry.getArray().reduce((sum, part) => sum + geometryLengthMeters(part), 0);
+      }
+      return 0;
+    }
+
+    function infoContent(feature) {
+      const container = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = feature.getProperty('name') || 'Map feature';
+      container.appendChild(title);
+
+      const description = feature.getProperty('description');
+      if (description) {
+        const body = document.createElement('div');
+        body.innerHTML = description;
+        container.appendChild(body);
+      }
+
+      const meters = geometryLengthMeters(feature.getGeometry());
+      if (meters > 0) {
+        const distance = document.createElement('p');
+        distance.innerHTML = `<b>Line length:</b> ${(meters / 1609.344).toFixed(2)} mi (${meters.toFixed(0)} m)`;
+        container.appendChild(distance);
+      }
+      return container;
+    }
+
+    function initialize() {
+      map = new google.maps.Map(document.getElementById('map_canvas'), {
+        center: { lat: 47.702368, lng: -120.662842 },
+        zoom: 8,
+        mapTypeId: google.maps.MapTypeId.HYBRID
+      });
+      infoWindow = new google.maps.InfoWindow();
+      map.data.setStyle(featureStyle);
+
+      setStatus('Loading transmission data…');
+      map.data.loadGeoJson(GEOJSON_URL, null, features => {
+        if (!features.length) {
+          setStatus('The GeoJSON loaded, but it contained no map features.', true);
+          return;
+        }
+        setStatus(`Loaded ${features.length.toLocaleString()} map features.`);
+        window.setTimeout(() => setStatus(''), 5000);
+      });
+
+      map.data.addListener('click', event => {
+        infoWindow.setContent(infoContent(event.feature));
+        infoWindow.setPosition(event.latLng);
+        infoWindow.open({ map });
+      });
+      map.data.addListener('mouseover', event => {
+        map.data.overrideStyle(event.feature, { strokeWeight: 6 });
+      });
+      map.data.addListener('mouseout', event => {
+        map.data.revertStyle(event.feature);
+      });
+
+      const input = document.getElementById('target');
+      const searchBox = new google.maps.places.SearchBox(input);
+      map.addListener('bounds_changed', () => searchBox.setBounds(map.getBounds()));
+      let searchMarkers = [];
+
+      searchBox.addListener('places_changed', () => {
+        const places = searchBox.getPlaces();
+        if (!places || places.length === 0) return;
+        searchMarkers.forEach(marker => marker.setMap(null));
+        searchMarkers = [];
+        const bounds = new google.maps.LatLngBounds();
+
+        places.forEach(place => {
+          if (!place.geometry?.location) return;
+          const marker = new google.maps.Marker({
+            map, title: place.name, position: place.geometry.location
+          });
+          searchMarkers.push(marker);
+          place.geometry.viewport ? bounds.union(place.geometry.viewport) : bounds.extend(place.geometry.location);
+        });
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds);
+          map.setZoom(15);
+        }
+      });
+    }
+
+    window.initialize = initialize;
+  </script>
+  <!-- Restrict this browser key to the HTTPS domain where you host this page. -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyArEZwQX5ZFYUMJt98r0Hsjzu_9hjaEm4g&libraries=geometry,places&callback=initialize" async defer></script>
+</head>
+<body>
+  <div id="map_canvas"></div>
+  <div id="search-panel">
+    <input id="target" type="text" placeholder="Enter Location Search Term" aria-label="Search for a location">
+  </div>
+  <div id="status" role="status" aria-live="polite"></div>
+</body>
+</html>
